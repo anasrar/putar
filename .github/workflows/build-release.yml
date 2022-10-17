@@ -1,0 +1,130 @@
+name: Build (Release)
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release Version"
+        required: true
+        type: string
+        default: "vx.x.x"
+
+jobs:
+  web:
+    name: Build (Web)
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 17
+
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v2.2.2
+        with:
+          version: 7.13.2
+
+      - name: Install Dependency
+        run: |
+          pnpm install --frozen-lockfile
+
+      - name: Format and Lint
+        run: |
+          pnpm format:check
+          pnpm lint
+
+      - name: Build Web
+        env:
+          VITE_PUTAR_VERSION: ${{ inputs.version }}
+        run: |
+          pnpm web:build
+
+      - name: Deploy Web
+        uses: peaceiris/actions-gh-pages@v3
+        # If you're changing the branch from main,
+        # also change the `main` in `refs/heads/main`
+        # below accordingly.
+        if: ${{ github.ref == 'refs/heads/main' }}
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./web/dist
+
+  electron:
+    name: Build (Electron)
+    permissions:
+      contents: write
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+          - windows-latest
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 17
+
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v2.2.2
+        with:
+          version: 7.13.2
+
+      - name: Install Dependency
+        run: |
+          pnpm install --frozen-lockfile
+
+      - name: Format and Lint
+        run: |
+          pnpm format:check
+          pnpm lint
+
+      - name: Build Electron
+        env:
+          VITE_PUTAR_VERSION: ${{ inputs.version }}
+        run: |
+          pnpm web:build:electron
+          pnpm electron:build
+          pnpm electron:dist
+
+      - name: Save Artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: files
+          path: |
+            electron/release/**/Putar-*
+
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    needs:
+      - electron
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Download Artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: files
+          path: files
+
+      - name: Create Release and Upload Artifacts
+        uses: ncipollo/release-action@v1.10.0
+        with:
+          name: ${{ inputs.version }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          allowUpdates: true
+          prerelease: false
+          tag: ${{ inputs.version }}
+          bodyFile: RELEASE.md
+          artifacts: files/**/*

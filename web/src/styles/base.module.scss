@@ -1,0 +1,60 @@
+:global {
+	*,
+	*::before,
+	*::after {
+		box-sizing: border-box;
+		margin: 0;
+		padding: 0;
+	}
+
+	body,
+	html {
+		font-size: 16px;
+	}
+}
+
+.app {
+	position: relative;
+	display: flex;
+	flex-flow: column nowrap;
+	min-height: 100vh;
+}
+
+.canvas {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100vw;
+	height: 100vh;
+	cursor: grab;
+
+	&.canvasActive {
+		cursor: grabbing;
+	}
+}
+
+.source {
+	position: absolute;
+	top: 0;
+	left: 0;
+	display: flex;
+	flex-flow: column nowrap;
+	justify-content: center;
+	align-items: center;
+	width: 100vw;
+	height: 100vh;
+	z-index: -1;
+	visibility: hidden;
+
+	&.sourceDrop {
+		z-index: auto;
+		visibility: visible;
+	}
+}
+
+.control {
+	position: absolute;
+	bottom: 0;
+	left: 0;
+	width: 100vw;
+}

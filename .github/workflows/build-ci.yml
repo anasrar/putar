@@ -1,0 +1,122 @@
+name: Build (CI)
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  web:
+    name: Build (Web)
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 17
+
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v2.2.2
+        with:
+          version: 7.13.2
+
+      - name: Install Dependency
+        run: |
+          pnpm install --frozen-lockfile
+
+      - name: Format and Lint
+        run: |
+          pnpm format:check
+          pnpm lint
+
+      - name: Build Web
+        env:
+          VITE_PUTAR_VERSION: build-ci
+        run: |
+          pnpm web:build
+
+  electron:
+    name: Build (Electron)
+    permissions:
+      contents: write
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+          - windows-latest
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 17
+
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v2.2.2
+        with:
+          version: 7.13.2
+
+      - name: Install Dependency
+        run: |
+          pnpm install --frozen-lockfile
+
+      - name: Format and Lint
+        run: |
+          pnpm format:check
+          pnpm lint
+
+      - name: Build Electron
+        env:
+          VITE_PUTAR_VERSION: build-ci
+        run: |
+          pnpm web:build:electron
+          pnpm electron:build
+          pnpm electron:dist
+
+      - name: Save Artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: files
+          path: |
+            electron/release/**/Putar-*
+
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    needs:
+      - electron
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Download Artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: files
+          path: files
+
+      - name: Create Body Release
+        run: |
+          echo "BUILD: $(date '+%Y-%m-%d')" > body.md
+          echo "COMMIT: $(git rev-parse --short HEAD)" >> body.md
+
+      - name: Create Release and Upload Artifacts
+        uses: ncipollo/release-action@v1.10.0
+        with:
+          name: Build (CI)
+          token: ${{ secrets.GITHUB_TOKEN }}
+          allowUpdates: true
+          prerelease: true
+          tag: build-ci
+          bodyFile: body.md
+          artifacts: files/**/*

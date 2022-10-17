@@ -1,0 +1,67 @@
+{
+	"name": "putar",
+	"private": true,
+	"workspaces": [
+		"web",
+		"electron",
+		"packages/*"
+	],
+	"description": "360 Image and Video Viewer",
+	"version": "0.0.1",
+	"author": "Anas Rin <mynameanasrar@gmail.com> (https://anasrar.github.io)",
+	"main": "./electron/dist/main.js",
+	"scripts": {
+		"web:dev": "pnpm --filter web run dev --mode web_dev",
+		"web:dev:electron": "pnpm --filter web run dev --mode electron_dev",
+		"web:build": "pnpm --filter web run build --mode web_prod",
+		"web:build:electron": "pnpm --filter web run build --mode electron_prod",
+		"electron:dev": "pnpm --filter electron run watch",
+		"electron:build": "pnpm --filter electron run build",
+		"electron:start": "pnpm --filter electron run start",
+		"electron:pack": "electron-builder --dir",
+		"electron:dist": "electron-builder",
+		"lint": "eslint --ignore-path .gitignore \"+(web|electron)/src/**/*.+(ts|tsx)\"",
+		"format:check": "prettier --check \"{packages,electron,web}/**/*.{ts,tsx,html,css,scss,json,md}\"",
+		"format:write": "prettier --write \"{packages,electron,web}/**/*.{ts,tsx,html,css,scss,json,md}\""
+	},
+	"build": {
+		"electronVersion": "21.1.0",
+		"appId": "anasrin.putar",
+		"productName": "Putar",
+		"asar": true,
+		"directories": {
+			"output": "electron/release/${version}",
+			"buildResources": "resources"
+		},
+		"files": [
+			"electron/dist/**/*",
+			"web/dist/**/*"
+		],
+		"win": {
+			"target": [
+				{
+					"target": "zip",
+					"arch": [
+						"x64"
+					]
+				}
+			],
+			"artifactName": "${productName}-Windows-v${version}.${ext}"
+		},
+		"linux": {
+			"icon": "resources/iconset",
+			"target": [
+				"tar.gz"
+			],
+			"artifactName": "${productName}-Linux-v${version}.${ext}"
+		}
+	},
+	"devDependencies": {
+		"@typescript-eslint/eslint-plugin": "latest",
+		"@typescript-eslint/parser": "latest",
+		"electron-builder": "^23.6.0",
+		"eslint": "^8.21.0",
+		"eslint-plugin-react": "latest",
+		"prettier": "^2.7.1"
+	}
+}

@@ -1,0 +1,5 @@
+node_modules
+.yarn
+
+blender/.venv
+web/public/models/projections.glb

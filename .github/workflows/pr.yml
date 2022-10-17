@@ -1,0 +1,93 @@
+name: Pull Request Check
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+  workflow_dispatch:
+
+jobs:
+  web:
+    name: Build (Web)
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 17
+
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v2.2.2
+        with:
+          version: 7.13.2
+
+      - name: Install Dependency
+        run: |
+          pnpm install --frozen-lockfile
+
+      - name: Format and Lint
+        run: |
+          pnpm format:check
+          pnpm lint
+
+      - name: Build Web
+        env:
+          VITE_PUTAR_VERSION: PR
+        run: |
+          pnpm web:build
+
+  electron:
+    name: Build (Electron)
+    permissions:
+      contents: write
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+          - windows-latest
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 17
+
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v2.2.2
+        with:
+          version: 7.13.2
+
+      - name: Install Dependency
+        run: |
+          pnpm install --frozen-lockfile
+
+      - name: Format and Lint
+        run: |
+          pnpm format:check
+          pnpm lint
+
+      - name: Build Electron
+        env:
+          VITE_PUTAR_VERSION: PR
+        run: |
+          pnpm web:build:electron
+          pnpm electron:build
+          pnpm electron:dist
+
+      - name: Save Artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: files
+          path: |
+            electron/release/**/Putar-*
